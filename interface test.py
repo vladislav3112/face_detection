@@ -28,7 +28,7 @@ def open_img(row_pos, is_template=False):
 
     # set the image as img
     panel.image = img
-    panel.grid(row=row_pos)
+    panel.grid(row=2,column=row_pos)
     if(is_template):
         TEMPLATE_URL = x
         var2.set(1)
@@ -69,8 +69,8 @@ root.resizable(width=True, height=True)
 # Create a button and place it into the window using grid layout
 var1 = tkinter.IntVar()
 var2 = tkinter.IntVar()
-btn1 = Button(root, text='open source image', command=lambda : open_img(row_pos=2))
-btn2 = Button(root, text='open template image', command=lambda: open_img(row_pos=4,is_template=True))
+btn1 = Button(root, text='open source image', command=lambda : open_img(row_pos=0))
+btn2 = Button(root, text='open template image', command=lambda: open_img(row_pos=2,is_template=True))
 btn3 = Button(root, text='calculate res', command=lambda: calculate_res())
 
 btn1.grid(row=1,column=0)
