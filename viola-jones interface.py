@@ -18,7 +18,7 @@ def open_img(row_pos, is_template=False):
     img = Image.open(x)
 
     # resize the image and apply a high-quality down sampling filter
-    #img = img.resize((250, 250), Image.ANTIALIAS)
+    img = img.resize((250, 250), Image.ANTIALIAS)
 
     # PhotoImage class is used to add image to widgets, icons etc
     img = ImageTk.PhotoImage(img)
@@ -43,12 +43,14 @@ def calculate_res():
     print("OK")
     current_dir = pathlib.Path(__file__).parent.resolve() # current directory
     img_path = os.path.join(current_dir, "result1.jpg")
-    img1 = ImageTk.PhotoImage(file=img_path)
-    panel1 = Label(root, image=img1)
+    my_img = Image.open(img_path)
+    img = my_img.resize((250, 250), Image.ANTIALIAS)
+    img = ImageTk.PhotoImage(img)
+    panel1 = Label(root, image=img)
 
     # set the image as img
-    panel1.image = img1
-    panel1.grid(row=2,column=2)
+    panel1.image = img
+    panel1.grid(row=2,column=2,sticky="NEWS")
     print(img_path)
 # Create a window
 root = Toplevel()
@@ -57,6 +59,8 @@ root.title("Image Loader")
 
 # Set the resolution of window
 root.geometry("550x300+300+150")
+
+
 
 # Allow Window to be resizable
 root.resizable(width=True, height=True)
