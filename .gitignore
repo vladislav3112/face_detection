@@ -1,6 +1,5 @@
 *.jpg
 *.png
 *.zip
-/fawkes
-/__*
+*/
 *xml
