@@ -7,6 +7,9 @@ import os
 import matplotlib.pyplot as plt
 import cv2
 
+DISPLAY_PARAM = 1 # display res images or return score
+CALCULATE_BEST = 0
+
 def load_images_from_folder(folder):
     images = []
     for filename in os.listdir(folder):
@@ -17,6 +20,7 @@ def load_images_from_folder(folder):
     return images
 def face_recognition_hist(BINS_NUM):
     
+    scores =[]
     train = []
     for train_image in train_images:
         train_img, bins, patches =  plt.hist(train_image.flatten(), bins=BINS_NUM)
@@ -38,8 +42,10 @@ def face_recognition_hist(BINS_NUM):
                 min_idx = idx
             idx += 1
         res_idx.append(min_idx)
+        scores.append(min_diff)
     plt.clf()
-
+    if(not DISPLAY_PARAM):
+        return scores
     rows = 2
     columns = 2
     idx = 0
@@ -69,11 +75,12 @@ def face_recognition_hist(BINS_NUM):
         plt.axis('off')
         plt.get_current_fig_manager().full_screen_toggle()
         plt.show(block=False)
-        plt.pause(0.3)
+        plt.pause(0.5)
         plt.close()
         idx += 1
 def face_recognition_scale(scale_param):
     
+    scores = []
     train = []
     for train_image in train_images:
         scaled_img = cv2.resize(train_image.copy(), (0, 0), fx=1/scale_param, fy=1/scale_param)
@@ -96,7 +103,10 @@ def face_recognition_scale(scale_param):
             idx += 1
         #print(min_diff)
         res_idx.append(min_idx)
+        scores.append(min_diff)
     plt.clf()
+    if(not DISPLAY_PARAM):
+        return scores
 
     rows = 2
     columns = 2
@@ -129,12 +139,13 @@ def face_recognition_scale(scale_param):
         plt.title("Train scaled")
         plt.get_current_fig_manager().full_screen_toggle()
         plt.show(block=False)
-        plt.pause(0.3)
+        plt.pause(0.5)
         plt.close()
         idx += 1
 
 def face_recognition_dft(components_num):
     
+    scores = []
     train = []
     for train_image in train_images:
         imf = np.float32(train_image)/255.0 # the dft +scaling
@@ -159,8 +170,10 @@ def face_recognition_dft(components_num):
             idx += 1
         #print(min_diff)
         res_idx.append(min_idx)
+        scores.append(min_diff)
     plt.clf()
-
+    if(not DISPLAY_PARAM):
+        return scores
     rows = 2
     columns = 2
     idx = 0
@@ -192,12 +205,13 @@ def face_recognition_dft(components_num):
         plt.title("Train scaled")
         plt.get_current_fig_manager().full_screen_toggle()
         plt.show(block=False)
-        plt.pause(0.3)
+        plt.pause(0.5)
         plt.close()
         idx += 1
 
 def face_recognition_dct(components_num):
     
+    scores = []
     train = []
     for train_image in train_images:
         imf = np.float32(train_image)/255.0 # the dft +scaling
@@ -222,7 +236,10 @@ def face_recognition_dct(components_num):
             idx += 1
         #print(min_diff)
         res_idx.append(min_idx)
+        scores.append(min_diff)
     plt.clf()
+    if(not DISPLAY_PARAM):
+        return scores
 
     rows = 2
     columns = 2
@@ -255,12 +272,13 @@ def face_recognition_dct(components_num):
         plt.title("Train scaled")
         plt.get_current_fig_manager().full_screen_toggle()
         plt.show(block=False)
-        plt.pause(0.3)
+        plt.pause(0.5)
         plt.close()
         idx += 1
 
 def face_recognition_grad(width):
     
+    scores = []
     train = []
     for train_image in train_images: 
         lines_arr = []
@@ -305,7 +323,10 @@ def face_recognition_grad(width):
             idx += 1
         #print(min_diff)
         res_idx.append(min_idx)
+        scores.append(min_diff)
     plt.clf()
+    if(not DISPLAY_PARAM):
+        return scores
 
     rows = 2
     columns = 2
@@ -336,13 +357,15 @@ def face_recognition_grad(width):
         #plt.imshow(train[elem],cmap='gray')
         plt.axis('off')
         plt.title("Train scaled")
-        plt.show()
+        plt.get_current_fig_manager().full_screen_toggle()
+        plt.show(block=False)
+        plt.pause(0.5)
+        plt.close()
         idx += 1
 
 
 #interface part
 from violajones import *
-from re import TEMPLATE
 from tkinter import *
 from PIL import ImageTk, Image
 from tkinter import filedialog
@@ -368,14 +391,70 @@ def openfolder(is_train):
 def calculate_res(train_path, test_path):
     global train_images
     global test_images
+    text = text_edit.get(0.3,END)
+    print(text)
+    try:
+        param = int(text)
+        label_param.config(text = "Write parameter value (now set as " + text + " )")
+    except Exception:
+        label_param.config(text = "Write parameter value (number only!):")
     train_images = load_images_from_folder(train_path)
     test_images = load_images_from_folder(test_path)
     if(var.get() == 1):
-        face_recognition_hist(BINS_NUM=32)
+        face_recognition_hist(BINS_NUM=param)
+        if(CALCULATE_BEST):
+            best = MAXINT
+            best_param = -1
+            for i in range(32,128,2):
+                curr_score = np.array(face_recognition_hist(BINS_NUM=i)).mean()
+                if (curr_score < best):
+                    best_param = i
+                    best = curr_score
+            label_param.config(text = "Best parameter value: " + str(best_param))
     elif(var.get() == 2):
-        face_recognition_scale(scale_param=2)
+        face_recognition_scale(scale_param=param)
+        best = MAXINT
+        best_param = -1
+        if(CALCULATE_BEST):
+            for i in np.arange(2,6,0.5):
+                curr_score = np.array(face_recognition_scale(scale_param=i)).mean()
+                if (curr_score < best):
+                    best_param = i
+                    best = curr_score
+            label_param.config(text = "Best parameter value: " + str(best_param))
+    elif(var.get() == 3):
+        face_recognition_dct(components_num=param)
+        best = MAXINT
+        best_param = -1
+        if(CALCULATE_BEST):
+            for i in np.arange(4,32):
+                curr_score = np.array(face_recognition_dct(components_num=i)).mean()
+                if (curr_score < best):
+                    best_param = i
+                    best = curr_score
+            label_param.config(text = "Best parameter value: " + str(best_param))
+    elif(var.get() == 4):
+        face_recognition_dft(components_num=param)
+        best = MAXINT
+        best_param = -1
+        if(CALCULATE_BEST):
+            for i in np.arange(4,32):
+                curr_score = np.array(face_recognition_dft(components_num=i)).mean()
+                if (curr_score < best):
+                    best_param = i
+                    best = curr_score
+            label_param.config(text = "Best parameter value: " + str(best_param))
     else:
-        face_recognition_dct(components_num=10)
+        face_recognition_grad(width=param)
+        best = MAXINT
+        best_param = -1
+        if(CALCULATE_BEST):
+            for i in np.arange(1,30):
+                curr_score = np.array(face_recognition_grad(width=i)).mean()
+                if (curr_score < best):
+                    best_param = i
+                    best = curr_score
+            label_param.config(text = "Best parameter value: " + str(best_param))
     print("OK")
 
 # Create a window
@@ -408,6 +487,23 @@ R5 = Radiobutton(root, text="gradient", variable=var, value=5,
                   command=sel)
 label = Label(root)
 label.grid(row=2,column=0)
+#write param to window:
+label_param = Label(root)
+label_param.config(text = "Write parameter value:")
+label_param.grid(row=3,column=1)
+#label for best param:
+label_best = Label(root)
+label_best.grid(row=3,column=3)
+
+def call():
+    text = text_edit.get(0.3,END)
+    print(text)
+
+
+text_edit = Text(root, width=4, height=1)
+
+text_edit.grid(row=3,column=2)
+
 btn1 = Button(root, text='select train folder', command=lambda : openfolder(is_train=True))
 btn2 = Button(root, text='select test folder', command=lambda : openfolder(is_train=False))
 btn3 = Button(root, text='calculate res', command=lambda: calculate_res(TRAIN_PATH,TEST_PATH))
@@ -421,4 +517,6 @@ R2.grid(row=4,column=0)
 R3.grid(row=5,column=0)
 R4.grid(row=6,column=0)
 R5.grid(row=7,column=0)
+
+
 root.mainloop()
