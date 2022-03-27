@@ -1,4 +1,4 @@
-from time import sleep
+from scipy.stats import mode
 from xmlrpc.client import MAXINT
 import numpy as np
 import skimage.color
@@ -9,6 +9,7 @@ import cv2
 
 DISPLAY_PARAM = 1 # display res images or return score
 CALCULATE_BEST = 0
+PARALLEL_METHOD = 0 # when we use parallel method it is 0
 
 def load_images_from_folder(folder):
     images = []
@@ -46,6 +47,8 @@ def face_recognition_hist(BINS_NUM):
     plt.clf()
     if(not DISPLAY_PARAM):
         return scores
+    if(PARALLEL_METHOD):
+        return res_idx
     rows = 2
     columns = 2
     idx = 0
@@ -107,6 +110,8 @@ def face_recognition_scale(scale_param):
     plt.clf()
     if(not DISPLAY_PARAM):
         return scores
+    if(PARALLEL_METHOD):
+        return res_idx
 
     rows = 2
     columns = 2
@@ -174,6 +179,8 @@ def face_recognition_dft(components_num):
     plt.clf()
     if(not DISPLAY_PARAM):
         return scores
+    if(PARALLEL_METHOD):
+        return res_idx
     rows = 2
     columns = 2
     idx = 0
@@ -240,7 +247,8 @@ def face_recognition_dct(components_num):
     plt.clf()
     if(not DISPLAY_PARAM):
         return scores
-
+    if(PARALLEL_METHOD):
+        return res_idx
     rows = 2
     columns = 2
     idx = 0
@@ -327,7 +335,8 @@ def face_recognition_grad(width):
     plt.clf()
     if(not DISPLAY_PARAM):
         return scores
-
+    if(PARALLEL_METHOD):
+        return res_idx
     rows = 2
     columns = 2
     idx = 0
@@ -388,6 +397,9 @@ def openfolder(is_train):
         TEST_PATH = folder_selected
     return folder_selected
 
+
+
+best_param_vec = [108,5.5,15,4,27]
 def calculate_res(train_path, test_path):
     global train_images
     global test_images
@@ -444,7 +456,7 @@ def calculate_res(train_path, test_path):
                     best_param = i
                     best = curr_score
             label_param.config(text = "Best parameter value: " + str(best_param))
-    else:
+    elif(var.get() == 5):
         face_recognition_grad(width=param)
         best = MAXINT
         best_param = -1
@@ -455,7 +467,42 @@ def calculate_res(train_path, test_path):
                     best_param = i
                     best = curr_score
             label_param.config(text = "Best parameter value: " + str(best_param))
+    else:
+        global PARALLEL_METHOD
+        PARALLEL_METHOD = 1
+        vec1 = face_recognition_hist(BINS_NUM=best_param_vec[0])
+        vec2 = face_recognition_scale(scale_param=best_param_vec[1])
+        vec3 = face_recognition_dft(components_num=best_param_vec[2])
+        vec4 = face_recognition_dct(components_num=best_param_vec[3])
+        vec5 = face_recognition_grad(width=best_param_vec[4])
+        result = mode([vec1,vec2,vec3,vec4,vec5])[0][0]
+        print(result)
+        #plotting result:
+    rows = 1
+    columns = 2
+    idx = 0
+    for elem in result:
+        fig, ax = plt.subplots()
+        fig.add_subplot(rows, columns, 1)
+        plt.draw()
+        # showing image
+        plt.imshow(test_images[idx],cmap='gray')
+        plt.axis('off')
+        plt.title("Test")
+  
+        # Adds a subplot at the 2nd position
+        fig.add_subplot(rows, columns, 2)
+        plt.imshow(train_images[elem],cmap='gray')
+        plt.axis('off')
+        plt.title("Train voted")
+        plt.get_current_fig_manager().full_screen_toggle()
+        plt.show(block=False)
+        plt.pause(0.5)
+        plt.close()
+        idx += 1    
     print("OK")
+
+
 
 # Create a window
 root = Tk()
@@ -485,6 +532,8 @@ R4 = Radiobutton(root, text="dft", variable=var, value=4,
                   command=sel)
 R5 = Radiobutton(root, text="gradient", variable=var, value=5,
                   command=sel)
+R6 = Radiobutton(root, text="parallel system", variable=var, value=6,
+                  command=sel)
 label = Label(root)
 label.grid(row=2,column=0)
 #write param to window:
@@ -494,10 +543,6 @@ label_param.grid(row=3,column=1)
 #label for best param:
 label_best = Label(root)
 label_best.grid(row=3,column=3)
-
-def call():
-    text = text_edit.get(0.3,END)
-    print(text)
 
 
 text_edit = Text(root, width=4, height=1)
@@ -517,6 +562,7 @@ R2.grid(row=4,column=0)
 R3.grid(row=5,column=0)
 R4.grid(row=6,column=0)
 R5.grid(row=7,column=0)
+R6.grid(row=8,column=0)
 
 
 root.mainloop()
