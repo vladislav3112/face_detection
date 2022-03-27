@@ -2,8 +2,8 @@ import cv2
 import numpy as np
 from matplotlib import pyplot as plt
 
-url1 = "different lighting.jpg"
-url2 = 'different lighting template.jpg'
+url1 = "train/1.jpg"
+url2 = "train/2.jpg"
 def template_matching(sourse_url, template_url):
     THRESHOLD = 0.3 #For TM_CCOEFF_NORMED, larger values = good fit.
 

@@ -8,9 +8,7 @@ import tkinter
 import pathlib, os
 
 SOURCE_URL = ""
-def open_img(row_pos, is_template=False):
-    global TEMPLATE_URL
-    global SOURCE_URL
+def open_img(row_pos):
     # Select the Imagename  from a folder
     x = openfilename()
     
@@ -29,7 +27,6 @@ def open_img(row_pos, is_template=False):
     # set the image as img
     panel.image = img
     panel.grid(row=2,column=row_pos)
-    SOURCE_URL = x
 
 
 def openfilename():
