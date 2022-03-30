@@ -6,6 +6,7 @@ import skimage.io
 import os
 import matplotlib.pyplot as plt
 import cv2
+from sklearn.metrics import accuracy_score
 
 DISPLAY_PARAM = 0 # display res images or return score
 CALCULATE_BEST = 1
@@ -62,10 +63,10 @@ def face_recognition_hist(BINS_NUM):
         res_idx.append(min_idx)
         scores.append(min_diff)
     plt.clf()
-    if(not DISPLAY_PARAM):
-        return scores
     if(PARALLEL_METHOD):
         return res_idx
+    if(not DISPLAY_PARAM):
+        return scores
     rows = 2
     columns = 2
     idx = 0
@@ -125,10 +126,10 @@ def face_recognition_scale(scale_param):
         res_idx.append(min_idx)
         scores.append(min_diff)
     plt.clf()
-    if(not DISPLAY_PARAM):
-        return scores
     if(PARALLEL_METHOD):
         return res_idx
+    if(not DISPLAY_PARAM):
+        return scores
 
     rows = 2
     columns = 2
@@ -172,13 +173,13 @@ def face_recognition_dft(components_num):
     for train_image in train_images:
         imf = np.float32(train_image)/255.0 # the dft +scaling
         imgcv = cv2.dft(imf)#*255.0)
-        train.append(np.abs(imgcv[0:components_num, 0:components_num]))
+        train.append(imgcv[0:components_num, 0:components_num])
 
     test = []
     for test_image in test_images:
         imf = np.float32(test_image)/255.0
         imgcv = cv2.dft(imf)#*255.0)# the dft +scaling
-        test.append(np.abs(imgcv[0:components_num, 0:components_num]))
+        test.append(imgcv[0:components_num, 0:components_num])
     res_idx = []
     for test_arr in test:
         min_diff = MAXINT
@@ -194,10 +195,10 @@ def face_recognition_dft(components_num):
         res_idx.append(min_idx)
         scores.append(min_diff)
     plt.clf()
-    if(not DISPLAY_PARAM):
-        return scores
     if(PARALLEL_METHOD):
         return res_idx
+    if(not DISPLAY_PARAM):
+        return scores
     rows = 2
     columns = 2
     idx = 0
@@ -262,10 +263,10 @@ def face_recognition_dct(components_num):
         res_idx.append(min_idx)
         scores.append(min_diff)
     plt.clf()
-    if(not DISPLAY_PARAM):
-        return scores
     if(PARALLEL_METHOD):
         return res_idx
+    if(not DISPLAY_PARAM):
+        return scores
     rows = 2
     columns = 2
     idx = 0
@@ -350,10 +351,10 @@ def face_recognition_grad(width):
         res_idx.append(min_idx)
         scores.append(min_diff)
     plt.clf()
-    if(not DISPLAY_PARAM):
-        return scores
     if(PARALLEL_METHOD):
         return res_idx
+    if(not DISPLAY_PARAM):
+        return scores
     rows = 2
     columns = 2
     idx = 0
@@ -416,135 +417,225 @@ def openfolder(is_train):
         TEST_PATH = folder_selected
     return folder_selected
 
+def calculate_accuracy(array,train_len, test_len):
+    idx = 0
+    accuracy = 0
+    for elem in array:
+        curr_idx = idx //(test_len//5)
+        if elem < (curr_idx + 1) * train_len // 5  and elem >= curr_idx * train_len // 5:
+            accuracy += 1
+            #print(elem," Is correct, pos= ", idx)
+        idx += 1
+    return accuracy / test_len
 
-
-best_param_vec = [108,5.5,25,9,24]
+best_param_vec = [58,5.5,30,7,18]
+#best_param_vec = [32,4.5,23,4,5]
 def calculate_res(train_path, test_path):
     global train_images
     global test_images
-    
+    global DISPLAY_PARAM
+    global CALCULATE_BEST
+    global PARALLEL_METHOD
+    global CROSS_VALIDATE
+    CROSS_VALIDATE = 0
+    if(var_is_best.get() == 1):
+        CALCULATE_BEST = 1
+        DISPLAY_PARAM = 0
+        PARALLEL_METHOD = 1
+    else:
+        DISPLAY_PARAM = 1
+        CALCULATE_BEST = 0
+    if(var_is_cv.get() == 1):
+        CROSS_VALIDATE = 1
+        DISPLAY_PARAM = 0
+        PARALLEL_METHOD = 1
     text = text_edit.get(0.3,END)
     print(text)
-    try:
-        param = int(text)
-        label_param.config(text = "Write parameter value (now set as " + text + " )")
-    except Exception:
-        label_param.config(text = "Write parameter value (number only!):")
-    train_images, test_images = load_images_from_folders(folders_num=5,start_idx=0, train_len=2)
+    if(DISPLAY_PARAM):
+        try:
+            param = int(text)
+            label_param.config(text = "Write parameter value (now set as " + text + " )")
+        except Exception:
+            label_param.config(text = "Write parameter value (number only!):")
+
+    train_images, test_images = load_images_from_folders(folders_num=5,start_idx=0, train_len=6)
     #train_images = load_images_from_folder(train_path)
     #test_images = load_images_from_folder(test_path)
     plot.clear()
+    plot.set_ylabel('точность распознавания')
+    plot.set_xlabel('параметр метода')
     if(var.get() == 1):
-        face_recognition_hist(BINS_NUM=param)
-        if(CALCULATE_BEST):
-            
-            best = MAXINT
-            best_param = -1
-            scores = []
-            for i in range(32,128,2):
-                curr_score = np.array(face_recognition_hist(BINS_NUM=i)).mean()
-                scores.append(curr_score)
-                if (curr_score < best):
-                    best_param = i
-                    best = curr_score
-            label_param.config(text = "Best parameter value: " + str(best_param))
-            plot.plot(range(32,128,2), scores, color="blue", marker="o")
-    elif(var.get() == 2):
-        face_recognition_scale(scale_param=param)
-        best = MAXINT
+        best = 0
         best_param = -1
         scores = []
-        if(CALCULATE_BEST):
-            for i in np.arange(2,6,0.5):
-                curr_score = np.array(face_recognition_scale(scale_param=i)).mean()
-                scores.append(curr_score)
-                if (curr_score < best):
+        acc_list = []
+        if(CROSS_VALIDATE):
+            for train_len_idx in range(1,10):
+                train_images, test_images = load_images_from_folders(folders_num=5,start_idx=0, train_len=train_len_idx)
+                vec = face_recognition_hist(BINS_NUM=best_param_vec[0])
+                acc = calculate_accuracy(vec,len(train_images), len(test_images))
+                acc_list.append(acc)
+            plot.plot(np.arange(1,10), acc_list, color="blue", marker="o")
+            plot.set_title('Hist')
+            plot.set_xlabel('Количество изображений в тестовой выборке')
+            #canvas.draw()
+        elif(CALCULATE_BEST):
+            for i in range(32,80,2):
+                curr_score = np.array(face_recognition_hist(BINS_NUM=i))
+                curr_acc = calculate_accuracy(curr_score,len(train_images), len(test_images))
+                scores.append(curr_acc)
+                if (curr_acc > best):
                     best_param = i
-                    best = curr_score
+                    best = curr_acc
+            label_param.config(text = "Best parameter value: " + str(best_param))
+            plot.plot(range(32,80,2), scores, color="blue", marker="o")
+            plot.set_title('Hist')
+        else:
+            face_recognition_hist(BINS_NUM=param)
+    elif(var.get() == 2):
+        best = 0
+        best_param = -1
+        scores = []
+        acc_list = []
+        if(CROSS_VALIDATE):
+            for train_len_idx in range(1,10):
+                train_images, test_images = load_images_from_folders(folders_num=5,start_idx=0, train_len=train_len_idx)
+                vec = face_recognition_scale(scale_param=best_param_vec[1])
+                acc = calculate_accuracy(vec,len(train_images), len(test_images))
+                acc_list.append(acc)
+            plot.plot(np.arange(1,10), acc_list, color="blue", marker="o")
+            plot.set_title('Scale')
+            plot.set_xlabel('Количество изображений в тестовой выборке')
+            #canvas.draw()
+        elif(CALCULATE_BEST):
+            for i in np.arange(2,6,0.5):
+                curr_score = np.array(face_recognition_scale(scale_param=i))
+                curr_acc = calculate_accuracy(curr_score,len(train_images), len(test_images))
+                scores.append(curr_acc)
+                if (curr_acc > best):
+                    best_param = i
+                    best = curr_acc
             label_param.config(text = "Best parameter value: " + str(best_param))
             plot.plot(np.arange(2,6,0.5), scores, color="blue", marker="o")
+            plot.set_title('Scale')
+        else:
+            face_recognition_scale(scale_param=param)
     elif(var.get() == 3):
-        face_recognition_dct(components_num=param)
-        best = MAXINT
+        best = 0
         best_param = -1
         scores = []
-        if(CALCULATE_BEST):
+        acc_list = []
+        # 5 plots like this!
+        if(CROSS_VALIDATE):
+            for train_len_idx in range(1,10):
+                train_images, test_images = load_images_from_folders(folders_num=5,start_idx=0, train_len=train_len_idx)
+                vec = face_recognition_dct(components_num=best_param_vec[2])
+                acc = calculate_accuracy(vec,len(train_images), len(test_images))
+                acc_list.append(acc)
+            plot.plot(np.arange(1,10), acc_list, color="blue", marker="o")
+            plot.set_title('DCT')
+            plot.set_xlabel('Количество изображений в тестовой выборке')
+            #canvas.draw()
+        #end
+
+        elif(CALCULATE_BEST):
             for i in np.arange(4,32):
-                curr_score = np.array(face_recognition_dct(components_num=i)).mean()
-                scores.append(curr_score)
-                if (curr_score < best):
+                curr_score = np.array(face_recognition_dct(components_num=i))
+                curr_acc = calculate_accuracy(curr_score,len(train_images), len(test_images))
+                scores.append(curr_acc)
+                if (curr_acc > best):
                     best_param = i
-                    best = curr_score
+                    best = curr_acc
             label_param.config(text = "Best parameter value: " + str(best_param))
             plot.plot(np.arange(4,32), scores, color="blue", marker="o")
+            plot.set_title('DCT')
+        else:
+            face_recognition_dct(components_num=param)
     elif(var.get() == 4):
-        face_recognition_dft(components_num=param)
-        best = MAXINT
+        best = 0
         best_param = -1
         scores = []
-        if(CALCULATE_BEST):
+        acc_list = []
+        if(CROSS_VALIDATE):
+            for train_len_idx in range(1,10):
+                train_images, test_images = load_images_from_folders(folders_num=5,start_idx=0, train_len=train_len_idx)
+                vec = face_recognition_dft(components_num=best_param_vec[3])
+                acc = calculate_accuracy(vec,len(train_images), len(test_images))
+                acc_list.append(acc)
+            plot.plot(np.arange(1,10), acc_list, color="blue", marker="o")
+            plot.set_title('DFT')
+            plot.set_xlabel('Количество изображений в тестовой выборке')
+           #canvas.draw()
+        elif(CALCULATE_BEST):
             for i in np.arange(4,32):
-                curr_score = np.array(face_recognition_dft(components_num=i)).mean()
-                scores.append(curr_score)
-                if (curr_score < best):
+                curr_score = np.array(face_recognition_dft(components_num=i))
+                curr_acc = calculate_accuracy(curr_score,len(train_images), len(test_images))
+                scores.append(curr_acc)
+                if (curr_acc > best):
                     best_param = i
-                    best = curr_score
+                    best = curr_acc
             label_param.config(text = "Best parameter value: " + str(best_param))
             plot.plot(np.arange(4,32), scores, color="blue", marker="o")
+            plot.set_title('DFT')
+        else:
+            face_recognition_dft(components_num=param)
     elif(var.get() == 5):
-        face_recognition_grad(width=param)
-        best = MAXINT
+        best = 0
         best_param = -1
         scores = []
-        if(CALCULATE_BEST):
+        acc_list = []
+        if(CROSS_VALIDATE):
+            for train_len_idx in range(1,10):
+                train_images, test_images = load_images_from_folders(folders_num=5,start_idx=0, train_len=train_len_idx)
+                vec = face_recognition_grad(width=best_param_vec[4])
+                acc = calculate_accuracy(vec,len(train_images), len(test_images))
+                acc_list.append(acc)
+            plot.plot(np.arange(1,10), acc_list, color="blue", marker="o")
+            plot.set_title('Grad')
+            plot.set_xlabel('Количество изображений в тестовой выборке')
+            #canvas.draw()
+        elif(CALCULATE_BEST):
             for i in np.arange(1,30):
-                curr_score = np.array(face_recognition_grad(width=i)).mean()
-                scores.append(curr_score)
-                if (curr_score < best):
+                curr_score = np.array(face_recognition_grad(width=i))
+                curr_acc = calculate_accuracy(curr_score,len(train_images), len(test_images))
+                scores.append(curr_acc)
+                if (curr_acc > best):
                     best_param = i
-                    best = curr_score
+                    best = curr_acc
             label_param.config(text = "Best parameter value: " + str(best_param))
             plot.plot(np.arange(1,30), scores, color="blue", marker="o")
+            plot.set_title('Grad')
+        else:
+            face_recognition_grad(width=param)
     else:
-        global PARALLEL_METHOD
+        acc_list = []
         PARALLEL_METHOD = 1
-        vec1 = face_recognition_hist(BINS_NUM=best_param_vec[0])
-        vec2 = face_recognition_scale(scale_param=best_param_vec[1])
-        vec3 = face_recognition_dft(components_num=best_param_vec[2])
-        vec4 = face_recognition_dct(components_num=best_param_vec[3])
-        vec5 = face_recognition_grad(width=best_param_vec[4])
-        result = mode([vec1,vec2,vec3,vec4,vec5])[0][0]
-        print(result)
+        for train_len_idx in range(1,10):
+            train_images, test_images = load_images_from_folders(folders_num=5,start_idx=0, train_len=train_len_idx)
+            vec1 = face_recognition_hist(BINS_NUM=best_param_vec[0])
+            vec2 = face_recognition_scale(scale_param=best_param_vec[1])
+            vec3 = face_recognition_dct(components_num=best_param_vec[2])
+            vec4 = face_recognition_dft(components_num=best_param_vec[3])
+            vec5 = face_recognition_grad(width=best_param_vec[4])
+            result = mode([vec1,vec2,vec3,vec4,vec5])[0][0]
+            print(result)
+            acc = calculate_accuracy(result,len(train_images), len(test_images))
+            acc_list.append(acc)
+        plot.set_title('Зависимость точности  от размера тестовой выборки')
+        plot.set_ylabel('точность распознования')
+        plot.set_xlabel('количество изображений в тестовой выборке')
         #plotting result:
-        rows = 1
-        columns = 2
-        idx = 0
-        for elem in result:
-            fig, ax = plt.subplots()
-            fig.add_subplot(rows, columns, 1)
-            plt.draw()
-            # showing image
-            plt.imshow(test_images[idx],cmap='gray')
-            plt.axis('off')
-            plt.title("Test")
-  
-            # Adds a subplot at the 2nd position
-            fig.add_subplot(rows, columns, 2)
-            plt.imshow(train_images[elem],cmap='gray')
-            plt.axis('off')
-            plt.title("Train voted")
-            plt.get_current_fig_manager().full_screen_toggle()
-            plt.show(block=False)
-            plt.pause(0.5)
-            plt.close()
-            idx += 1    
+        plot.plot(np.arange(1,10), acc_list, color="blue", marker="o")
         print("OK")
+    canvas.draw()
 
 
 
 # Create a window
 root = Tk()
 var = IntVar()
+var_is_best = IntVar()
+var_is_cv = IntVar()
 # Set Title as Image Loader
 root.title("Image Loader")
 
@@ -552,7 +643,7 @@ root.title("Image Loader")
 root.geometry("550x300+300+150")
 
 #init plot
-figure = Figure(figsize=(4, 3), dpi=100)
+figure = Figure(figsize=(5, 4), dpi=100)
 plot = figure.add_subplot(1, 1, 1)
 
 # Allow Window to be resizable
@@ -593,6 +684,9 @@ btn1 = Button(root, text='select train folder', command=lambda : openfolder(is_t
 btn2 = Button(root, text='select test folder', command=lambda : openfolder(is_train=False))
 btn3 = Button(root, text='calculate res', command=lambda: calculate_res(TRAIN_PATH,TEST_PATH))
 
+#Checkbuttons:
+checkbtn_calc_best = Checkbutton(root, text="calculate best parameter", variable=var_is_best, onvalue=1, offvalue=0)
+checkbtn_cross_val = Checkbutton(root, text="cross_validate", variable=var_is_cv, onvalue=1, offvalue=0)
 btn1.grid(row=1,column=0)
 btn2.grid(row=1,column=2)
 btn3.grid(row=1,column=4)
@@ -603,8 +697,33 @@ R3.grid(row=5,column=0)
 R4.grid(row=6,column=0)
 R5.grid(row=7,column=0)
 R6.grid(row=8,column=0)
-
+checkbtn_calc_best.grid(row=5,column=1)
+checkbtn_cross_val.grid(row=6,column=1)
 #set loaction of plot
 canvas = FigureCanvasTkAgg(figure, root)
 canvas.get_tk_widget().grid(row=8,column=4)
+
 root.mainloop()
+
+#   rows = 1
+#         columns = 2
+#         idx = 0
+#         for elem in result:
+#             fig, ax = plt.subplots()
+#             fig.add_subplot(rows, columns, 1)
+#             plt.draw()
+#             # showing image
+#             plt.imshow(test_images[idx],cmap='gray')
+#             plt.axis('off')
+#             plt.title("Test")
+  
+#             # Adds a subplot at the 2nd position
+#             fig.add_subplot(rows, columns, 2)
+#             plt.imshow(train_images[elem],cmap='gray')
+#             plt.axis('off')
+#             plt.title("Train voted")
+#             plt.get_current_fig_manager().full_screen_toggle()
+#             plt.show(block=False)
+#             plt.pause(0.5)
+#             plt.close()
+#             idx += 1    
