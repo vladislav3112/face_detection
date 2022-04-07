@@ -6,9 +6,11 @@ import os
 import seaborn as sns
 import pandas as pd
 from skimage.filters import sobel
-from skimage.feature import greycomatrix, greycoprops
+from skimage.feature import graycomatrix,graycoprops
 
 print(os.listdir("paintings_2"))
+from skimage import io
+
 
 #Resize images to
 SIZE = 128
@@ -65,7 +67,7 @@ x_train, y_train, x_test, y_test = train_images, train_labels_encoded, test_imag
 ###################################################################
 # FEATURE EXTRACTOR function
 # input shape is (n, x, y, c) - number of images, x, y, and channels
-def feature_extractor(dataset):
+def feature_extractor_glcm(dataset):
     image_dataset = pd.DataFrame()
     for image in range(dataset.shape[0]):  #iterate through each file 
         #print(image)
@@ -79,66 +81,66 @@ def feature_extractor(dataset):
   
                 
          #Full image
-        #GLCM = greycomatrix(img, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4])
-        GLCM = greycomatrix(img, [1], [0])       
-        GLCM_Energy = greycoprops(GLCM, 'energy')[0]
+        #GLCM = graycomatrix(img, [1], [0, np.pi/4, np.pi/2, 3*np.pi/4])
+        GLCM = graycomatrix(img, [1], [0])       
+        GLCM_Energy = graycoprops(GLCM, 'energy')[0]
         df['Energy'] = GLCM_Energy
-        GLCM_corr = greycoprops(GLCM, 'correlation')[0]
+        GLCM_corr = graycoprops(GLCM, 'correlation')[0]
         df['Corr'] = GLCM_corr       
-        GLCM_diss = greycoprops(GLCM, 'dissimilarity')[0]
+        GLCM_diss = graycoprops(GLCM, 'dissimilarity')[0]
         df['Diss_sim'] = GLCM_diss       
-        GLCM_hom = greycoprops(GLCM, 'homogeneity')[0]
+        GLCM_hom = graycoprops(GLCM, 'homogeneity')[0]
         df['Homogen'] = GLCM_hom       
-        GLCM_contr = greycoprops(GLCM, 'contrast')[0]
+        GLCM_contr = graycoprops(GLCM, 'contrast')[0]
         df['Contrast'] = GLCM_contr
 
 
-        GLCM2 = greycomatrix(img, [3], [0])       
-        GLCM_Energy2 = greycoprops(GLCM2, 'energy')[0]
+        GLCM2 = graycomatrix(img, [3], [0])       
+        GLCM_Energy2 = graycoprops(GLCM2, 'energy')[0]
         df['Energy2'] = GLCM_Energy2
-        GLCM_corr2 = greycoprops(GLCM2, 'correlation')[0]
+        GLCM_corr2 = graycoprops(GLCM2, 'correlation')[0]
         df['Corr2'] = GLCM_corr2       
-        GLCM_diss2 = greycoprops(GLCM2, 'dissimilarity')[0]
+        GLCM_diss2 = graycoprops(GLCM2, 'dissimilarity')[0]
         df['Diss_sim2'] = GLCM_diss2       
-        GLCM_hom2 = greycoprops(GLCM2, 'homogeneity')[0]
+        GLCM_hom2 = graycoprops(GLCM2, 'homogeneity')[0]
         df['Homogen2'] = GLCM_hom2       
-        GLCM_contr2 = greycoprops(GLCM2, 'contrast')[0]
+        GLCM_contr2 = graycoprops(GLCM2, 'contrast')[0]
         df['Contrast2'] = GLCM_contr2
 
-        GLCM3 = greycomatrix(img, [5], [0])       
-        GLCM_Energy3 = greycoprops(GLCM3, 'energy')[0]
+        GLCM3 = graycomatrix(img, [5], [0])       
+        GLCM_Energy3 = graycoprops(GLCM3, 'energy')[0]
         df['Energy3'] = GLCM_Energy3
-        GLCM_corr3 = greycoprops(GLCM3, 'correlation')[0]
+        GLCM_corr3 = graycoprops(GLCM3, 'correlation')[0]
         df['Corr3'] = GLCM_corr3       
-        GLCM_diss3 = greycoprops(GLCM3, 'dissimilarity')[0]
+        GLCM_diss3 = graycoprops(GLCM3, 'dissimilarity')[0]
         df['Diss_sim3'] = GLCM_diss3       
-        GLCM_hom3 = greycoprops(GLCM3, 'homogeneity')[0]
+        GLCM_hom3 = graycoprops(GLCM3, 'homogeneity')[0]
         df['Homogen3'] = GLCM_hom3       
-        GLCM_contr3 = greycoprops(GLCM3, 'contrast')[0]
+        GLCM_contr3 = graycoprops(GLCM3, 'contrast')[0]
         df['Contrast3'] = GLCM_contr3
 
-        GLCM4 = greycomatrix(img, [0], [np.pi/4])       
-        GLCM_Energy4 = greycoprops(GLCM4, 'energy')[0]
+        GLCM4 = graycomatrix(img, [0], [np.pi/4])       
+        GLCM_Energy4 = graycoprops(GLCM4, 'energy')[0]
         df['Energy4'] = GLCM_Energy4
-        GLCM_corr4 = greycoprops(GLCM4, 'correlation')[0]
+        GLCM_corr4 = graycoprops(GLCM4, 'correlation')[0]
         df['Corr4'] = GLCM_corr4       
-        GLCM_diss4 = greycoprops(GLCM4, 'dissimilarity')[0]
+        GLCM_diss4 = graycoprops(GLCM4, 'dissimilarity')[0]
         df['Diss_sim4'] = GLCM_diss4       
-        GLCM_hom4 = greycoprops(GLCM4, 'homogeneity')[0]
+        GLCM_hom4 = graycoprops(GLCM4, 'homogeneity')[0]
         df['Homogen4'] = GLCM_hom4       
-        GLCM_contr4 = greycoprops(GLCM4, 'contrast')[0]
+        GLCM_contr4 = graycoprops(GLCM4, 'contrast')[0]
         df['Contrast4'] = GLCM_contr4
         
-        GLCM5 = greycomatrix(img, [0], [np.pi/2])       
-        GLCM_Energy5 = greycoprops(GLCM5, 'energy')[0]
+        GLCM5 = graycomatrix(img, [0], [np.pi/2])       
+        GLCM_Energy5 = graycoprops(GLCM5, 'energy')[0]
         df['Energy5'] = GLCM_Energy5
-        GLCM_corr5 = greycoprops(GLCM5, 'correlation')[0]
+        GLCM_corr5 = graycoprops(GLCM5, 'correlation')[0]
         df['Corr5'] = GLCM_corr5       
-        GLCM_diss5 = greycoprops(GLCM5, 'dissimilarity')[0]
+        GLCM_diss5 = graycoprops(GLCM5, 'dissimilarity')[0]
         df['Diss_sim5'] = GLCM_diss5       
-        GLCM_hom5 = greycoprops(GLCM5, 'homogeneity')[0]
+        GLCM_hom5 = graycoprops(GLCM5, 'homogeneity')[0]
         df['Homogen5'] = GLCM_hom5       
-        GLCM_contr5 = greycoprops(GLCM5, 'contrast')[0]
+        GLCM_contr5 = graycoprops(GLCM5, 'contrast')[0]
         df['Contrast5'] = GLCM_contr5
         
         #Add more filters as needed
@@ -150,10 +152,45 @@ def feature_extractor(dataset):
         image_dataset = image_dataset.append(df)
         
     return image_dataset
+
+def feature_extractor_breif(dataset):
+    image_dataset = pd.DataFrame()
+    for image in range(dataset.shape[0]):  #iterate through each file 
+        #print(image)
+        
+        df = pd.DataFrame()  #Temporary data frame to capture information for each loop.
+        #Reset dataframe to blank after each loop.
+        
+        img = dataset[image, :,:]
+        sift = cv2.SIFT_create()
+        kp, des = sift.detectAndCompute(img,None)
+        # showing image
+        #print("Image")
+        #imshow(gaussian)
+        #show()
+        # getting Speeded-Up Robust Features
+        print("No of  points: {}".format(len(kp)))
+        #df['Points'] = kp[:10]
+        df['Angles'] = [o.angle for o in kp[:10]]
+        df['PointsX'] = [o.pt[0] for o in kp[:10]]
+        df['PointsY'] = [o.pt[1] for o in kp[:10]]
+        df['Sizes'] = [o.size for o in kp[:10]]
+        desflatten = [np.mean(arr) for arr in des]
+        #df['Descriptor'] = desflatten
+        ################################################################
+        #START ADDING DATA TO THE DATAFRAME
+        image_dataset = image_dataset.append(df)
+    return image_dataset
+
+    
+
 ####################################################################
 #Extract features from training images
-image_features = feature_extractor(x_train)
-X_for_ML =image_features
+image_features = feature_extractor_breif(x_train)
+
+ 
+
+X_for_ML = image_features
 #Reshape to a vector for Random Forest / SVM training
 n_features = image_features.shape[1]
 image_features = np.expand_dims(image_features, axis=0)
@@ -161,7 +198,7 @@ X_for_ML = np.reshape(image_features, (x_train.shape[0], -1))  #Reshape to #imag
 
 #Define the classifier
 from sklearn.ensemble import RandomForestClassifier
-RF_model = RandomForestClassifier(n_estimators = 100, random_state = 42)
+RF_model = RandomForestClassifier(n_estimators = 500, random_state = 42)
 
 #Can also use SVM but RF is faster and may be more accurate.
 #from sklearn import svm
@@ -192,7 +229,7 @@ RF_model.fit(X_for_ML, y_train) #For sklearn no one hot encoding
 
 #Predict on Test data
 #Extract features from test data and reshape, just like training data
-test_features = feature_extractor(x_test)
+test_features = feature_extractor_breif(x_test)
 test_features = np.expand_dims(test_features, axis=0)
 test_for_RF = np.reshape(test_features, (x_test.shape[0], -1))
 
@@ -222,7 +259,7 @@ plt.imshow(img)
 plt.show()
 #Extract features and reshape to right dimensions
 input_img = np.expand_dims(img, axis=0) #Expand dims so the input is (num images, x, y, c)
-input_img_features=feature_extractor(input_img)
+input_img_features=feature_extractor_breif(input_img)
 input_img_features = np.expand_dims(input_img_features, axis=0)
 input_img_for_RF = np.reshape(input_img_features, (input_img.shape[0], -1))
 #Predict
