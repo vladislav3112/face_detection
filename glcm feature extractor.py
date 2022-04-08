@@ -186,7 +186,7 @@ def feature_extractor_sift(dataset):
         image_dataset = image_dataset.append(df)
     return image_dataset
 
-def feature_extractor_breif(dataset):
+def feature_extractor_shi_tomasi(dataset):
     image_dataset = pd.DataFrame()
     for image in range(dataset.shape[0]):  #iterate through each file 
         #print(image)
@@ -194,25 +194,11 @@ def feature_extractor_breif(dataset):
         df = pd.DataFrame()  #Temporary data frame to capture information for each loop.
         #Reset dataframe to blank after each loop.
         
-        training_image = training_gray = dataset[image, :,:]
-        fast = cv2.FastFeatureDetector_create()
-        brief = cv2.xfeatures2d.BriefDescriptorExtractor_create()
-
-        train_keypoints = fast.detect(training_gray, None)
-
-        train_keypoints, train_descriptor = brief.compute(training_gray, train_keypoints)
-
-        #keypoints_without_size = np.copy(training_image)
-        #keypoints_with_size = np.copy(training_image)
-
-        # Print the number of keypoints detected in the training image
-        print("Number of Keypoints Detected In The Training Image: ", len(train_keypoints))
-        keypoints = sorted(train_keypoints, key = lambda x : x.size)
-        df['Angles'] = [o.angle for o in keypoints[:20]]
-        df['PointsX'] = [o.pt[0] for o in keypoints[:20]]
-        df['PointsY'] = [o.pt[1] for o in keypoints[:20]]
-        sh_entropy = entropy(img)
-        df['Entropy'] = sh_entropy[:20]
+        training_img = dataset[image, :,:]
+        corners = cv2.goodFeaturesToTrack(training_img,60,0.01,4)
+        corners = np.int0(corners)
+        df['PointsX'] = [o[0][0] for o in corners]
+        df['PointsY'] = [o[0][1] for o in corners]
         #df['descriptor'] = train_descriptor            
         image_dataset = image_dataset.append(df)
     return image_dataset
@@ -220,7 +206,7 @@ def feature_extractor_breif(dataset):
 
 ####################################################################
 #Extract features from training images
-image_features = feature_extractor_sift(x_train)
+image_features = feature_extractor_shi_tomasi(x_train)
 
  
 
@@ -232,7 +218,7 @@ X_for_ML = np.reshape(image_features, (x_train.shape[0], -1))  #Reshape to #imag
 
 #Define the classifier
 from sklearn.ensemble import RandomForestClassifier
-RF_model = RandomForestClassifier(n_estimators = 1500, max_depth=200,min_samples_leaf=2,min_samples_split=7, random_state = 42)#best for sift
+RF_model = RandomForestClassifier(n_estimators = 300,random_state = 42)#best for sift
 #RF_model = RandomForestClassifier(n_estimators = 100, random_state = 42)#best for glcm
 #RF_model = RandomForestClassifier(n_estimators = 25, random_state = 42)#best for brief
 
@@ -265,7 +251,7 @@ RF_model.fit(X_for_ML, y_train) #For sklearn no one hot encoding
 
 #Predict on Test data
 #Extract features from test data and reshape, just like training data
-test_features = feature_extractor_sift(x_test)
+test_features = feature_extractor_shi_tomasi(x_test)
 test_features = np.expand_dims(test_features, axis=0)
 test_for_RF = np.reshape(test_features, (x_test.shape[0], -1))
 
@@ -295,7 +281,7 @@ plt.imshow(img)
 #plt.show()
 #Extract features and reshape to right dimensions
 input_img = np.expand_dims(img, axis=0) #Expand dims so the input is (num images, x, y, c)
-input_img_features=feature_extractor_sift(input_img)
+input_img_features=feature_extractor_shi_tomasi(input_img)
 input_img_features = np.expand_dims(input_img_features, axis=0)
 input_img_for_RF = np.reshape(input_img_features, (input_img.shape[0], -1))
 #Predict
@@ -369,7 +355,7 @@ def calculate_res(idx):
     #plt.show()
     #Extract features and reshape to right dimensions
     input_img = np.expand_dims(img, axis=0) #Expand dims so the input is (num images, x, y, c)
-    input_img_features=feature_extractor_sift(input_img)
+    input_img_features=feature_extractor_shi_tomasi(input_img)
     input_img_features = np.expand_dims(input_img_features, axis=0)
     input_img_for_RF = np.reshape(input_img_features, (input_img.shape[0], -1))
     #Predict
