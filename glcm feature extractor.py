@@ -7,7 +7,9 @@ import seaborn as sns
 import pandas as pd
 from skimage.filters import sobel
 from skimage.feature import graycomatrix,graycoprops
+from scipy.stats import entropy
 
+#print(help('cv2'))
 print(os.listdir("paintings_2"))
 from skimage import io
 
@@ -153,7 +155,7 @@ def feature_extractor_glcm(dataset):
         
     return image_dataset
 
-def feature_extractor_breif(dataset):
+def feature_extractor_sift(dataset):
     image_dataset = pd.DataFrame()
     for image in range(dataset.shape[0]):  #iterate through each file 
         #print(image)
@@ -171,10 +173,12 @@ def feature_extractor_breif(dataset):
         # getting Speeded-Up Robust Features
         print("No of  points: {}".format(len(kp)))
         #df['Points'] = kp[:10]
-        df['Angles'] = [o.angle for o in kp[:10]]
-        df['PointsX'] = [o.pt[0] for o in kp[:10]]
-        df['PointsY'] = [o.pt[1] for o in kp[:10]]
-        df['Sizes'] = [o.size for o in kp[:10]]
+        keypoints = sorted(kp, key = lambda x : x.size)
+        df['Octaves'] = [o.octave for o in keypoints[:25]]
+        df['Angles'] = [o.angle for o in keypoints[:25]]
+        df['PointsX'] = [o.pt[0] for o in keypoints[:25]]
+        df['PointsY'] = [o.pt[1] for o in keypoints[:25]]
+        #df['Sizes'] = [o.size for o in keypoints[:20]]
         desflatten = [np.mean(arr) for arr in des]
         #df['Descriptor'] = desflatten
         ################################################################
@@ -182,11 +186,41 @@ def feature_extractor_breif(dataset):
         image_dataset = image_dataset.append(df)
     return image_dataset
 
-    
+def feature_extractor_breif(dataset):
+    image_dataset = pd.DataFrame()
+    for image in range(dataset.shape[0]):  #iterate through each file 
+        #print(image)
+        
+        df = pd.DataFrame()  #Temporary data frame to capture information for each loop.
+        #Reset dataframe to blank after each loop.
+        
+        training_image = training_gray = dataset[image, :,:]
+        fast = cv2.FastFeatureDetector_create()
+        brief = cv2.xfeatures2d.BriefDescriptorExtractor_create()
+
+        train_keypoints = fast.detect(training_gray, None)
+
+        train_keypoints, train_descriptor = brief.compute(training_gray, train_keypoints)
+
+        #keypoints_without_size = np.copy(training_image)
+        #keypoints_with_size = np.copy(training_image)
+
+        # Print the number of keypoints detected in the training image
+        print("Number of Keypoints Detected In The Training Image: ", len(train_keypoints))
+        keypoints = sorted(train_keypoints, key = lambda x : x.size)
+        df['Angles'] = [o.angle for o in keypoints[:20]]
+        df['PointsX'] = [o.pt[0] for o in keypoints[:20]]
+        df['PointsY'] = [o.pt[1] for o in keypoints[:20]]
+        sh_entropy = entropy(img)
+        df['Entropy'] = sh_entropy[:20]
+        #df['descriptor'] = train_descriptor            
+        image_dataset = image_dataset.append(df)
+    return image_dataset
+
 
 ####################################################################
 #Extract features from training images
-image_features = feature_extractor_breif(x_train)
+image_features = feature_extractor_sift(x_train)
 
  
 
@@ -198,7 +232,9 @@ X_for_ML = np.reshape(image_features, (x_train.shape[0], -1))  #Reshape to #imag
 
 #Define the classifier
 from sklearn.ensemble import RandomForestClassifier
-RF_model = RandomForestClassifier(n_estimators = 500, random_state = 42)
+RF_model = RandomForestClassifier(n_estimators = 1500, max_depth=200,min_samples_leaf=2,min_samples_split=7, random_state = 42)#best for sift
+#RF_model = RandomForestClassifier(n_estimators = 100, random_state = 42)#best for glcm
+#RF_model = RandomForestClassifier(n_estimators = 25, random_state = 42)#best for brief
 
 #Can also use SVM but RF is faster and may be more accurate.
 #from sklearn import svm
@@ -229,7 +265,7 @@ RF_model.fit(X_for_ML, y_train) #For sklearn no one hot encoding
 
 #Predict on Test data
 #Extract features from test data and reshape, just like training data
-test_features = feature_extractor_breif(x_test)
+test_features = feature_extractor_sift(x_test)
 test_features = np.expand_dims(test_features, axis=0)
 test_for_RF = np.reshape(test_features, (x_test.shape[0], -1))
 
@@ -250,16 +286,16 @@ cm = confusion_matrix(test_labels, test_prediction)
 fig, ax = plt.subplots(figsize=(6,6))         # Sample figsize in inches
 sns.set(font_scale=1.6)
 sns.heatmap(cm, annot=True, linewidths=.5, ax=ax)
-
+plt.show()
 #Check results on a few random images
 import random
 n=random.randint(0, x_test.shape[0]-1) #Select the index of image to be loaded for testing
 img = x_test[n]
 plt.imshow(img)
-plt.show()
+#plt.show()
 #Extract features and reshape to right dimensions
 input_img = np.expand_dims(img, axis=0) #Expand dims so the input is (num images, x, y, c)
-input_img_features=feature_extractor_breif(input_img)
+input_img_features=feature_extractor_sift(input_img)
 input_img_features = np.expand_dims(input_img_features, axis=0)
 input_img_for_RF = np.reshape(input_img_features, (input_img.shape[0], -1))
 #Predict
@@ -268,3 +304,112 @@ img_prediction = RF_model.predict(input_img_for_RF)
 img_prediction = le.inverse_transform([img_prediction])  #Reverse the label encoder to original name
 print("The prediction for this image is: ", img_prediction)
 print("The actual label for this image is: ", test_labels[n])
+
+
+
+## INTERFACE PART:
+from xmlrpc.client import MAXINT
+import numpy as np
+import skimage.color
+import skimage.io
+import os
+import matplotlib.pyplot as plt
+import cv2
+
+def load_images_from_folder(folder):
+    images = []
+    for filename in os.listdir(folder):
+        image = skimage.io.imread(fname=os.path.join(folder,filename), as_gray=True)
+        image = cv2.imread(os.path.join(folder,filename), 0)
+        if image is not None:
+            images.append(image)
+    return images
+
+from tkinter import *
+from PIL import ImageTk, Image
+from tkinter import filedialog
+from template_matching import *
+import tkinter
+import pathlib, os
+
+SOURCE_URL = ""
+def open_img(row_pos):
+    global SOURCE_URL
+    global POS
+    # Select the Imagename  from a folder
+    x = openfilename()
+    # opens the image
+    img = Image.open(x)
+    code = x[x.find("__")+2:x.find(".")]
+    print(code)
+    POS = int(code)#get pos of numper in path
+    # resize the image and apply a high-quality down sampling filter
+    img = img.resize((250, 250), Image.ANTIALIAS)
+
+    # PhotoImage class is used to add image to widgets, icons etc
+    img = ImageTk.PhotoImage(img)
+
+    # create a label
+    panel = Label(root, image=img)
+
+    # set the image as img
+    panel.image = img
+    panel.grid(row=2,column=row_pos)
+
+
+def openfilename():
+    # open file dialog box to select image
+    # The dialogue box has a title "Open"
+    filename = filedialog.askopenfilename(title='"pen')
+    return filename
+
+def calculate_res(idx):
+    img = x_test[idx]
+    plt.imshow(img)
+    #plt.show()
+    #Extract features and reshape to right dimensions
+    input_img = np.expand_dims(img, axis=0) #Expand dims so the input is (num images, x, y, c)
+    input_img_features=feature_extractor_sift(input_img)
+    input_img_features = np.expand_dims(input_img_features, axis=0)
+    input_img_for_RF = np.reshape(input_img_features, (input_img.shape[0], -1))
+    #Predict
+    img_prediction = RF_model.predict(input_img_for_RF)
+    #img_prediction=np.argmax(img_prediction, axis=1)
+    img_prediction = le.inverse_transform([img_prediction])  #Reverse the label encoder to original name
+    print("The prediction for this image is: ", img_prediction)
+    print("The actual label for this image is: ", test_labels[idx])
+
+    print("OK")
+    str = "The prediction for this image is: " + img_prediction[0]+'\n'+"The actual label for this image is: " + test_labels[idx]
+    #current_dir = pathlib.Path(__file__).parent.resolve() # current directory
+    #img_path = os.path.join(current_dir, "result1.jpg")
+    #my_img = Image.open(img_path)
+    #img = my_img.resize((250, 250), Image.ANTIALIAS)
+    #img = ImageTk.PhotoImage(img)
+    panel1 = Label(root,text=str)
+
+    # set the image as img
+    panel1.grid(row=2,column=2,sticky="NEWS")
+    #print(img_path)
+    
+# Create a window
+root = Toplevel()
+# Set Title as Image Loader
+root.title("Image Loader")
+
+# Set the resolution of window
+root.geometry("550x300+300+150")
+
+# Allow Window to be resizable
+root.resizable(width=True, height=True)
+
+# Create a button and place it into the window using grid layout
+var1 = tkinter.IntVar()
+var2 = tkinter.IntVar()
+btn1 = Button(root, text='open source image', command=lambda : open_img(row_pos=0))
+btn3 = Button(root, text='calculate res', command=lambda: calculate_res(idx=POS))
+
+btn1.grid(row=1,column=0)
+btn3.grid(row=1,column=2)
+
+root.mainloop()
