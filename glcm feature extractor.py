@@ -24,9 +24,9 @@ train_labels = []
 #for directory_path in glob.glob("cell_images/train/*"):
 for directory_path in glob.glob("paintings_2/train/*"):
     label = directory_path.split("\\")[-1]
-    print(label)
+    #print(label)
     for img_path in glob.glob(os.path.join(directory_path, "*.jpg")):
-        print(img_path)
+        #print(img_path)
         img = cv2.imread(img_path, 0) #Reading color images
         img = cv2.resize(img, (SIZE, SIZE)) #Resize images
         train_images.append(img)
@@ -42,7 +42,9 @@ test_labels = []
 #for directory_path in glob.glob("cell_images/test/*"): 
 for directory_path in glob.glob("paintings_2/test/*"):
     fruit_label = directory_path.split("\\")[-1]
+    print(fruit_label)
     for img_path in glob.glob(os.path.join(directory_path, "*.jpg")):
+        print(img_path)
         img = cv2.imread(img_path, 0)
         img = cv2.resize(img, (SIZE, SIZE))
         test_images.append(img)
@@ -78,8 +80,8 @@ def feature_extractor_glcm(dataset):
         #Reset dataframe to blank after each loop.
         
         img = dataset[image, :,:]
-    ################################################################
-    #START ADDING DATA TO THE DATAFRAME
+        ################################################################
+        #START ADDING DATA TO THE DATAFRAME
   
                 
          #Full image
@@ -152,6 +154,10 @@ def feature_extractor_glcm(dataset):
         
         #Append features from current image to the dataset
         image_dataset = image_dataset.append(df)
+        if(dataset.shape[0]==1):
+            print("OK")
+            #sns.heatmap(np.reshape(GLCM,(256,256)), annot=True)
+            #splt.show()
         
     return image_dataset
 
@@ -180,6 +186,15 @@ def feature_extractor_sift(dataset):
         df['PointsY'] = [o.pt[1] for o in keypoints[:25]]
         #df['Sizes'] = [o.size for o in keypoints[:20]]
         desflatten = [np.mean(arr) for arr in des]
+        if(dataset.shape[0]==1):
+            img=cv2.drawKeypoints(img,kp,image)
+            ph_img = ImageTk.PhotoImage(Image.fromarray(img))
+            panel2 = Label(root,image=ph_img)
+            panel2.image=ph_img
+            # set the image as img
+            panel2.grid(row=3,column=0,sticky="NEWS")
+            #plt.imshow(img)
+            #plt.show()
         #df['Descriptor'] = desflatten
         ################################################################
         #START ADDING DATA TO THE DATAFRAME
@@ -188,15 +203,25 @@ def feature_extractor_sift(dataset):
 
 def feature_extractor_shi_tomasi(dataset):
     image_dataset = pd.DataFrame()
+    
     for image in range(dataset.shape[0]):  #iterate through each file 
         #print(image)
         
         df = pd.DataFrame()  #Temporary data frame to capture information for each loop.
         #Reset dataframe to blank after each loop.
         
-        training_img = dataset[image, :,:]
-        corners = cv2.goodFeaturesToTrack(training_img,60,0.01,4)
+        training_img = dataset[image,:,:,]
+        corners = cv2.goodFeaturesToTrack(image=training_img,maxCorners=58,minDistance=4,qualityLevel=0.04)
         corners = np.int0(corners)
+        if(dataset.shape[0]) == 1:
+            for i in corners:
+                x,y = i.ravel()
+                cv2.circle(training_img,(x,y),3,255,-1)
+            ph_img = ImageTk.PhotoImage(Image.fromarray(training_img))
+            panel2 = Label(root,image=ph_img)
+            panel2.image=ph_img
+            # set the image as img
+            panel2.grid(row=3,column=0,sticky="NEWS")
         df['PointsX'] = [o[0][0] for o in corners]
         df['PointsY'] = [o[0][1] for o in corners]
         #df['descriptor'] = train_descriptor            
@@ -218,9 +243,8 @@ X_for_ML = np.reshape(image_features, (x_train.shape[0], -1))  #Reshape to #imag
 
 #Define the classifier
 from sklearn.ensemble import RandomForestClassifier
-RF_model = RandomForestClassifier(n_estimators = 300,random_state = 42)#best for sift
-#RF_model = RandomForestClassifier(n_estimators = 100, random_state = 42)#best for glcm
-#RF_model = RandomForestClassifier(n_estimators = 25, random_state = 42)#best for brief
+#RF_model = RandomForestClassifier(n_estimators = 300,random_state = 42)#best for shi_tomasi
+RF_model = RandomForestClassifier(n_estimators = 100, random_state = 42)#best for glcm,sift
 
 #Can also use SVM but RF is faster and may be more accurate.
 #from sklearn import svm
@@ -251,7 +275,7 @@ RF_model.fit(X_for_ML, y_train) #For sklearn no one hot encoding
 
 #Predict on Test data
 #Extract features from test data and reshape, just like training data
-test_features = feature_extractor_shi_tomasi(x_test)
+test_features = feature_extractor_shi_tomasi(x_test.copy())
 test_features = np.expand_dims(test_features, axis=0)
 test_for_RF = np.reshape(test_features, (x_test.shape[0], -1))
 
@@ -273,23 +297,6 @@ fig, ax = plt.subplots(figsize=(6,6))         # Sample figsize in inches
 sns.set(font_scale=1.6)
 sns.heatmap(cm, annot=True, linewidths=.5, ax=ax)
 plt.show()
-#Check results on a few random images
-import random
-n=random.randint(0, x_test.shape[0]-1) #Select the index of image to be loaded for testing
-img = x_test[n]
-plt.imshow(img)
-#plt.show()
-#Extract features and reshape to right dimensions
-input_img = np.expand_dims(img, axis=0) #Expand dims so the input is (num images, x, y, c)
-input_img_features=feature_extractor_shi_tomasi(input_img)
-input_img_features = np.expand_dims(input_img_features, axis=0)
-input_img_for_RF = np.reshape(input_img_features, (input_img.shape[0], -1))
-#Predict
-img_prediction = RF_model.predict(input_img_for_RF)
-#img_prediction=np.argmax(img_prediction, axis=1)
-img_prediction = le.inverse_transform([img_prediction])  #Reverse the label encoder to original name
-print("The prediction for this image is: ", img_prediction)
-print("The actual label for this image is: ", test_labels[n])
 
 
 
@@ -350,9 +357,8 @@ def openfilename():
     return filename
 
 def calculate_res(idx):
-    img = x_test[idx]
-    plt.imshow(img)
-    #plt.show()
+    img = x_test[idx].copy()
+
     #Extract features and reshape to right dimensions
     input_img = np.expand_dims(img, axis=0) #Expand dims so the input is (num images, x, y, c)
     input_img_features=feature_extractor_shi_tomasi(input_img)
