@@ -188,7 +188,7 @@ def feature_extractor_sift(dataset):
         desflatten = [np.mean(arr) for arr in des]
         if(dataset.shape[0]==1):
             img=cv2.drawKeypoints(img,kp,image)
-            ph_img = ImageTk.PhotoImage(Image.fromarray(img))
+            ph_img = ImageTk.PhotoImage(Image.fromarray(img).resize((250, 250), Image.ANTIALIAS))
             panel2 = Label(root,image=ph_img)
             panel2.image=ph_img
             # set the image as img
@@ -217,7 +217,7 @@ def feature_extractor_shi_tomasi(dataset):
             for i in corners:
                 x,y = i.ravel()
                 cv2.circle(training_img,(x,y),3,255,-1)
-            ph_img = ImageTk.PhotoImage(Image.fromarray(training_img))
+            ph_img = ImageTk.PhotoImage(Image.fromarray(training_img).resize((250, 250), Image.ANTIALIAS))
             panel2 = Label(root,image=ph_img)
             panel2.image=ph_img
             # set the image as img
@@ -253,25 +253,6 @@ RF_model = RandomForestClassifier(n_estimators = 100, random_state = 42)#best fo
 
 # Fit the model on training data
 RF_model.fit(X_for_ML, y_train) #For sklearn no one hot encoding
-
-
-
-# import lightgbm as lgb
-#  #Class names for LGBM start at 0 so reassigning labels from 1,2,3,4 to 0,1,2,3
-# d_train = lgb.Dataset(X_for_ML, label=y_train)
-
-# # https://lightgbm.readthedocs.io/en/latest/Parameters.html
-# lgbm_params = {'learning_rate':0.05, 'boosting_type':'dart',    
-#               'objective':'multiclass',
-#               'metric': 'multi_logloss',
-#               'num_leaves':50,
-#               'max_depth':10,
-#               'num_class':3}  #no.of unique values in the target class not inclusive of the end value
-
-
-# lgb_model = lgb.train(lgbm_params, d_train, 100) #50 iterations. Increase iterations for small learning rates
-
-
 
 #Predict on Test data
 #Extract features from test data and reshape, just like training data
@@ -381,7 +362,7 @@ def calculate_res(idx):
     panel1 = Label(root,text=str)
 
     # set the image as img
-    panel1.grid(row=2,column=2,sticky="NEWS")
+    panel1.grid(row=2,column=3,sticky="NEWS")
     #print(img_path)
     
 # Create a window
@@ -398,10 +379,16 @@ root.resizable(width=True, height=True)
 # Create a button and place it into the window using grid layout
 var1 = tkinter.IntVar()
 var2 = tkinter.IntVar()
+var_check = tkinter.IntVar()
 btn1 = Button(root, text='open source image', command=lambda : open_img(row_pos=0))
 btn3 = Button(root, text='calculate res', command=lambda: calculate_res(idx=POS))
 
 btn1.grid(row=1,column=0)
 btn3.grid(row=1,column=2)
-
+R1 = Radiobutton(root, text="glcm", variable=var_check, value=1)
+R2 = Radiobutton(root, text="SIFT", variable=var_check, value=2)
+R3 = Radiobutton(root, text="Shi-Tomashi", variable=var_check, value=3)
+R1.grid(row=2,column=2)
+R2.grid(row=3,column=2)
+R3.grid(row=4,column=2)
 root.mainloop()
